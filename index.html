@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Scheduler // Interactive Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== ambient background ===== -->
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- ===== HEADER ===== -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo-mark">
+      <span class="logo-core"></span>
+    </div>
+    <div class="logo-text">
+      <span class="logo-title">SCHED<span class="accent">//</span>SIM</span>
+      <span class="logo-sub">cpu process scheduling, visualized</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="clock-widget" id="clockWidget">
+      <span class="clock-label">SYSTEM CLOCK</span>
+      <span class="clock-value" id="clockValue">t = 0</span>
+    </div>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">OPERATING SYSTEMS · CPU SCHEDULING LAB</p>
+    <h1 class="hero-title">Watch the scheduler <span class="accent">think.</span></h1>
+    <p class="hero-copy">Feed in processes with their arrival and burst times, pick an algorithm — preemptive or non&#8209;preemptive — and watch each one travel from the ready queue into the CPU, tick by tick. Then compare all four head‑to‑head to see which one actually wins.</p>
+    <div class="hero-scroll-cue" id="scrollCue">
+      <span>start scheduling</span>
+      <svg width="14" height="20" viewBox="0 0 14 20"><path d="M7 0 V18 M1 12 L7 18 L13 12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MAIN APP ===== -->
+<main class="app" id="appSection">
+
+  <!-- ---- ALGORITHM SELECT ---- -->
+  <section class="panel algo-panel">
+    <div class="panel-head">
+      <span class="panel-index">01</span>
+      <h2>Choose an algorithm</h2>
+    </div>
+    <div class="algo-tabs" id="algoTabs">
+      <button class="algo-tab" data-algo="fcfs">
+        <span class="algo-tab-code">FCFS</span>
+        <span class="algo-tab-name">First Come, First Served</span>
+        <span class="algo-tab-mode">non‑preemptive</span>
+      </button>
+      <button class="algo-tab" data-algo="sjf">
+        <span class="algo-tab-code">SJF</span>
+        <span class="algo-tab-name">Shortest Job First</span>
+        <span class="algo-tab-mode">both modes</span>
+      </button>
+      <button class="algo-tab" data-algo="rr">
+        <span class="algo-tab-code">RR</span>
+        <span class="algo-tab-name">Round Robin</span>
+        <span class="algo-tab-mode">preemptive</span>
+      </button>
+      <button class="algo-tab" data-algo="priority">
+        <span class="algo-tab-code">PR</span>
+        <span class="algo-tab-name">Priority Scheduling</span>
+        <span class="algo-tab-mode">both modes</span>
+      </button>
+    </div>
+
+    <div class="algo-options" id="algoOptions">
+      <div class="opt-group" id="modeGroup">
+        <label class="opt-label">Mode</label>
+        <div class="toggle-pair" id="modeToggle">
+          <button class="toggle-btn active" data-mode="non">Non‑preemptive</button>
+          <button class="toggle-btn" data-mode="pre">Preemptive</button>
+        </div>
+      </div>
+      <div class="opt-group" id="quantumGroup" style="display:none;">
+        <label class="opt-label">Time Quantum</label>
+        <div class="stepper">
+          <button class="step-btn" id="qMinus">–</button>
+          <input type="number" id="quantumInput" value="2" min="1" max="20">
+          <button class="step-btn" id="qPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="algo-desc" id="algoDesc"></p>
+  </section>
+
+  <!-- ---- PROCESS INPUT ---- -->
+  <section class="panel input-panel">
+    <div class="panel-head">
+      <span class="panel-index">02</span>
+      <h2>Add your processes</h2>
+    </div>
+
+    <form class="process-form" id="processForm">
+      <div class="field">
+        <label>Process</label>
+        <div class="pid-display" id="pidDisplay">P1</div>
+      </div>
+      <div class="field">
+        <label for="arrivalInput">Arrival time</label>
+        <input type="number" id="arrivalInput" min="0" value="0" required>
+      </div>
+      <div class="field">
+        <label for="burstInput">Burst time</label>
+        <input type="number" id="burstInput" min="1" value="5" required>
+      </div>
+      <div class="field" id="priorityField">
+        <label for="priorityInput">Priority <span class="hint">(lower = higher)</span></label>
+        <input type="number" id="priorityInput" min="1" value="1">
+      </div>
+      <button type="submit" class="btn-add">
+        <span>Add process</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </form>
+
+    <div class="process-table-wrap">
+      <table class="process-table" id="processTable">
+        <thead>
+          <tr>
+            <th>Process</th>
+            <th>Arrival</th>
+            <th>Burst</th>
+            <th id="priorityHeader">Priority</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="processTableBody"></tbody>
+      </table>
+      <p class="empty-hint" id="emptyHint">No processes yet — add a few above, or load a sample set.</p>
+    </div>
+
+    <div class="input-actions">
+      <button class="btn-ghost" id="sampleBtn">Load sample set</button>
+      <button class="btn-ghost danger" id="clearBtn">Clear all</button>
+      <div class="spacer"></div>
+      <button class="btn-run" id="runBtn" disabled>
+        <span>Run simulation</span>
+        <svg width="12" height="14" viewBox="0 0 12 14"><path d="M1 1L11 7L1 13V1Z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ---- SIMULATOR STAGE ---- -->
+  <section class="panel sim-panel" id="simPanel">
+    <div class="panel-head">
+      <span class="panel-index">03</span>
+      <h2>Live simulation</h2>
+      <div class="sim-controls" id="simControls">
+        <button class="sim-btn" id="playPauseBtn" title="Play / Pause">
+          <svg id="playIcon" width="12" height="14" viewBox="0 0 12 14"><path d="M1 1L11 7L1 13V1Z" fill="currentColor"/></svg>
+          <svg id="pauseIcon" width="12" height="14" viewBox="0 0 12 14" style="display:none;"><rect x="1" y="1" width="4" height="12" fill="currentColor"/><rect x="7" y="1" width="4" height="12" fill="currentColor"/></svg>
+        </button>
+        <button class="sim-btn" id="stepBtn" title="Step forward">
+          <svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 1L7 7L1 13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="1" width="2" height="12" fill="currentColor"/></svg>
+        </button>
+        <button class="sim-btn" id="restartBtn" title="Restart">
+          <svg width="14" height="14" viewBox="0 0 14 14"><path d="M13 7A6 6 0 1 1 11 2.5M13 1v4h-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="speed-control">
+          <label>Speed</label>
+          <input type="range" id="speedRange" min="1" max="4" value="2" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="stage-col arrivals-col">
+        <div class="stage-label">NOT ARRIVED</div>
+        <div class="lane" id="notArrivedLane"></div>
+      </div>
+
+      <div class="stage-col ready-col">
+        <div class="stage-label">READY QUEUE</div>
+        <div class="lane queue-lane" id="readyLane"></div>
+      </div>
+
+      <div class="stage-col cpu-col">
+        <div class="stage-label">CPU</div>
+        <div class="cpu-box" id="cpuBox">
+          <div class="cpu-ring"></div>
+          <span class="cpu-empty-text" id="cpuEmptyText">idle</span>
+        </div>
+        <div class="tick-readout" id="tickReadout">t = 0</div>
+      </div>
+
+      <div class="stage-col done-col">
+        <div class="stage-label">COMPLETED</div>
+        <div class="lane" id="doneLane"></div>
+      </div>
+    </div>
+
+    <div class="gantt-wrap">
+      <div class="stage-label">GANTT CHART</div>
+      <div class="gantt-scroll">
+        <div class="gantt-track" id="ganttTrack"></div>
+      </div>
+      <div class="gantt-ruler" id="ganttRuler"></div>
+    </div>
+
+    <div class="metrics-wrap" id="metricsWrap" style="display:none;">
+      <table class="metrics-table" id="metricsTable">
+        <thead>
+          <tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Completion</th><th>Turnaround</th><th>Waiting</th></tr>
+        </thead>
+        <tbody id="metricsBody"></tbody>
+      </table>
+      <div class="metrics-summary" id="metricsSummary"></div>
+    </div>
+  </section>
+
+  <!-- ---- ALGORITHM INFO ---- -->
+  <section class="panel info-panel">
+    <div class="panel-head">
+      <span class="panel-index">04</span>
+      <h2>How each algorithm thinks</h2>
+    </div>
+    <div class="info-grid" id="infoGrid"></div>
+  </section>
+
+  <!-- ---- COMPARISON ---- -->
+  <section class="panel compare-panel">
+    <div class="panel-head">
+      <span class="panel-index">05</span>
+      <h2>Which one wins, for your workload?</h2>
+    </div>
+    <p class="compare-copy">Run every algorithm against the exact same process set and compare average waiting and turnaround times side by side. Round Robin uses the quantum set above; Priority and SJF are compared in the mode you last selected.</p>
+    <button class="btn-run" id="compareBtn" disabled>
+      <span>Compare all four</span>
+      <svg width="13" height="13" viewBox="0 0 13 13"><path d="M1 9L4.5 5.5L7.5 8L12 2" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="compare-results" id="compareResults" style="display:none;">
+      <div class="compare-chart" id="compareChart"></div>
+      <div class="winner-banner" id="winnerBanner"></div>
+      <table class="metrics-table compare-table" id="compareTable">
+        <thead><tr><th>Algorithm</th><th>Avg Waiting</th><th>Avg Turnaround</th><th>Context Switches</th></tr></thead>
+        <tbody id="compareBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span>SCHED//SIM — built for understanding, not for production kernels.</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
